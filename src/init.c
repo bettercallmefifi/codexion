@@ -1,74 +1,74 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   init.c                                             :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: feel-idr <feel-idr@student.1337.ma>        +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/09/06 01:07:43 by feel-idr          #+#    #+#             */
-/*   Updated: 2026/09/06 01:07:45 by feel-idr         ###   ########.fr       */
+/*                                                       :::      ::::::::    */
+/*   init.c                                            :+:      :+:    :+:    */
+/*                                                   +:+ +:+         +:+      */
+/*   By: feel-idr <feel-idr@student.1337.ma>       +#+  +:+       +#+         */
+/*                                               +#+#+#+#+#+   +#+            */
+/*   Created: 2026/09/06 01:07:43 by feel-idr         #+#    #+#              */
+/*   Updated: 2026/09/11 00:00:00 by feel-idr        ###   ########.fr        */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "header.h"
 
-static void	init_coders(t_simulation *sim)
+static void	init_workers(t_context *ctx)
 {
-	int	i;
+	int	slot;
 
-	i = 0;
-	while (i < sim->config.nbr_of_coders)
+	slot = 0;
+	while (slot < ctx->opts.worker_count)
 	{
-		sim->coders[i].id = i + 1;
-		sim->coders[i].done = 0;
-		sim->coders[i].left_dongle = &sim->dongles[i];
-		sim->coders[i].right_dongle = &sim->dongles[
-			(i + 1) % sim->config.nbr_of_coders];
-		sim->coders[i].nbr_of_compilations = 0;
-		sim->coders[i].sim = sim;
-		sim->coders[i].last_compile = 0;
-		sim->dongles[i].size = 0;
-		sim->dongles[i].is_taken = 0;
-		sim->dongles[i].release = 0;
-		pthread_mutex_init(&sim->dongles[i].pause_dongle, NULL);
-		i++;
+		ctx->workers[slot].worker_id = slot + 1;
+		ctx->workers[slot].finished = 0;
+		ctx->workers[slot].left_device = &ctx->devices[slot];
+		ctx->workers[slot].right_device = &ctx->devices[
+			(slot + 1) % ctx->opts.worker_count];
+		ctx->workers[slot].build_count = 0;
+		ctx->workers[slot].ctx = ctx;
+		ctx->workers[slot].last_build_ms = 0;
+		ctx->devices[slot].queued = 0;
+		ctx->devices[slot].busy = 0;
+		ctx->devices[slot].released_ms = 0;
+		pthread_mutex_init(&ctx->devices[slot].lock, NULL);
+		slot++;
 	}
 }
 
-int	init_simulation(t_simulation *sim, t_config *config)
+int	setup_context(t_context *ctx, t_options *opts)
 {
-	sim->config = *config;
-	sim->simulation_running = 1;
-	sim->start_time = get_time_ms();
-	pthread_mutex_init(&sim->pause_print, NULL);
-	pthread_mutex_init(&sim->pause, NULL);
-	sim->coders = malloc(sizeof(t_coder)
-			* sim->config.nbr_of_coders);
-	if (!sim->coders)
+	ctx->opts = *opts;
+	ctx->active = 1;
+	ctx->epoch_ms = clock_ms();
+	pthread_mutex_init(&ctx->output_lock, NULL);
+	pthread_mutex_init(&ctx->state_lock, NULL);
+	ctx->workers = malloc(sizeof(t_worker)
+			* ctx->opts.worker_count);
+	if (!ctx->workers)
 		return (1);
-	sim->dongles = malloc(sizeof(t_dongle)
-			* sim->config.nbr_of_coders);
-	if (!sim->dongles)
+	ctx->devices = malloc(sizeof(t_device)
+			* ctx->opts.worker_count);
+	if (!ctx->devices)
 	{
-		free(sim->coders);
+		free(ctx->workers);
 		return (1);
 	}
-	init_coders(sim);
+	init_workers(ctx);
 	return (0);
 }
 
-void	cleanup_simulation(t_simulation *sim)
+void	destroy_context(t_context *ctx)
 {
-	int	i;
+	int	slot;
 
-	i = 0;
-	while (i < sim->config.nbr_of_coders)
+	slot = 0;
+	while (slot < ctx->opts.worker_count)
 	{
-		pthread_mutex_destroy(&sim->dongles[i].pause_dongle);
-		i++;
+		pthread_mutex_destroy(&ctx->devices[slot].lock);
+		slot++;
 	}
-	pthread_mutex_destroy(&sim->pause_print);
-	pthread_mutex_destroy(&sim->pause);
-	free(sim->coders);
-	free(sim->dongles);
+	pthread_mutex_destroy(&ctx->output_lock);
+	pthread_mutex_destroy(&ctx->state_lock);
+	free(ctx->workers);
+	free(ctx->devices);
 }

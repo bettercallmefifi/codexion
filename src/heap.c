@@ -1,100 +1,102 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   heap.c                                             :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: feel-idr <feel-idr@student.1337.ma>        +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/09/06 01:07:37 by feel-idr          #+#    #+#             */
-/*   Updated: 2026/09/06 01:07:39 by feel-idr         ###   ########.fr       */
+/*                                                       :::      ::::::::    */
+/*   heap.c                                            :+:      :+:    :+:    */
+/*                                                   +:+ +:+         +:+      */
+/*   By: feel-idr <feel-idr@student.1337.ma>       +#+  +:+       +#+         */
+/*                                               +#+#+#+#+#+   +#+            */
+/*   Created: 2026/09/06 01:07:37 by feel-idr         #+#    #+#              */
+/*   Updated: 2026/09/11 00:00:00 by feel-idr        ###   ########.fr        */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "header.h"
 
-void	insert_heap(t_dongle *dongle, t_edf info)
+void	queue_push(t_device *device, t_request request)
 {
-	t_edf	temp;
-	int		i;
-	int		parent;
+	t_request	swap;
+	int			slot;
+	int			ancestor;
 
-	dongle->quee[dongle->size] = info;
-	dongle->size++;
-	i = dongle->size - 1;
-	while (i > 0)
+	device->pending[device->queued] = request;
+	device->queued++;
+	slot = device->queued - 1;
+	while (slot > 0)
 	{
-		parent = (i - 1) / 2;
-		if (dongle->quee[i].deadline
-			> dongle->quee[parent].deadline)
+		ancestor = (slot - 1) / 2;
+		if (device->pending[slot].priority_ms
+			> device->pending[ancestor].priority_ms)
 			break ;
-		if (dongle->quee[i].deadline == dongle->quee[parent].deadline
-			&& dongle->quee[i].id > dongle->quee[parent].id)
+		if (device->pending[slot].priority_ms
+			== device->pending[ancestor].priority_ms
+			&& device->pending[slot].worker_id
+			> device->pending[ancestor].worker_id)
 			break ;
-		temp = dongle->quee[i];
-		dongle->quee[i] = dongle->quee[parent];
-		dongle->quee[parent] = temp;
-		i = parent;
+		swap = device->pending[slot];
+		device->pending[slot] = device->pending[ancestor];
+		device->pending[ancestor] = swap;
+		slot = ancestor;
 	}
 }
 
-static int	get_smallest(t_dongle *dongle, int left, int right)
+static int	select_child(t_device *device, int left_child, int right_child)
 {
-	if (right < dongle->size
-		&& (dongle->quee[right].deadline
-			< dongle->quee[left].deadline
-			|| (dongle->quee[right].deadline
-				== dongle->quee[left].deadline
-				&& dongle->quee[right].id
-				< dongle->quee[left].id)))
-		return (right);
-	return (left);
+	if (right_child < device->queued
+		&& (device->pending[right_child].priority_ms
+			< device->pending[left_child].priority_ms
+			|| (device->pending[right_child].priority_ms
+				== device->pending[left_child].priority_ms
+				&& device->pending[right_child].worker_id
+				< device->pending[left_child].worker_id)))
+		return (right_child);
+	return (left_child);
 }
 
-static int	is_parent_smaller(t_dongle *dongle, int index, int smallest)
+static int	parent_precedes(t_device *device, int cursor, int best_child)
 {
-	if (dongle->quee[index].deadline
-		< dongle->quee[smallest].deadline)
+	if (device->pending[cursor].priority_ms
+		< device->pending[best_child].priority_ms)
 		return (1);
-	if (dongle->quee[index].deadline
-		== dongle->quee[smallest].deadline
-		&& dongle->quee[index].id
-		< dongle->quee[smallest].id)
+	if (device->pending[cursor].priority_ms
+		== device->pending[best_child].priority_ms
+		&& device->pending[cursor].worker_id
+		< device->pending[best_child].worker_id)
 		return (1);
 	return (0);
 }
 
-void	insert_down(t_dongle *dongle)
+void	queue_sift_down(t_device *device)
 {
-	int		index;
-	int		left;
-	int		right;
-	int		smallest;
-	t_edf	temp;
+	int			cursor;
+	int			left_child;
+	int			right_child;
+	int			best_child;
+	t_request	swap;
 
-	index = 0;
+	cursor = 0;
 	while (1)
 	{
-		left = 2 * index + 1;
-		right = 2 * index + 2;
-		if (left >= dongle->size)
+		left_child = 2 * cursor + 1;
+		right_child = 2 * cursor + 2;
+		if (left_child >= device->queued)
 			break ;
-		smallest = get_smallest(dongle, left, right);
-		if (is_parent_smaller(dongle, index, smallest))
+		best_child = select_child(device, left_child, right_child);
+		if (parent_precedes(device, cursor, best_child))
 			break ;
-		temp = dongle->quee[index];
-		dongle->quee[index] = dongle->quee[smallest];
-		dongle->quee[smallest] = temp;
-		index = smallest;
+		swap = device->pending[cursor];
+		device->pending[cursor] = device->pending[best_child];
+		device->pending[best_child] = swap;
+		cursor = best_child;
 	}
 }
 
-t_edf	pop_heap(t_dongle *dongle)
+t_request	queue_pop(t_device *device)
 {
-	t_edf	result;
+	t_request	removed;
 
-	result = dongle->quee[0];
-	dongle->quee[0] = dongle->quee[dongle->size - 1];
-	dongle->size--;
-	insert_down(dongle);
-	return (result);
+	removed = device->pending[0];
+	device->pending[0] = device->pending[device->queued - 1];
+	device->queued--;
+	queue_sift_down(device);
+	return (removed);
 }

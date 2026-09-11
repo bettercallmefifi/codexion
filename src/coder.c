@@ -1,63 +1,63 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   coder.c                                            :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: feel-idr <feel-idr@student.1337.ma>        +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/09/06 01:07:19 by feel-idr          #+#    #+#             */
-/*   Updated: 2026/09/06 01:07:22 by feel-idr         ###   ########.fr       */
+/*                                                       :::      ::::::::    */
+/*   coder.c                                           :+:      :+:    :+:    */
+/*                                                   +:+ +:+         +:+      */
+/*   By: feel-idr <feel-idr@student.1337.ma>       +#+  +:+       +#+         */
+/*                                               +#+#+#+#+#+   +#+            */
+/*   Created: 2026/09/06 01:07:19 by feel-idr         #+#    #+#              */
+/*   Updated: 2026/09/11 00:00:00 by feel-idr        ###   ########.fr        */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "header.h"
 
-void	*coder_routine(void *arg)
+void	*worker_main(void *payload)
 {
-	t_coder	*coder;
+	t_worker	*worker;
 
-	coder = (t_coder *)arg;
-	if (coder->id % 2 != 0)
+	worker = (t_worker *)payload;
+	if (worker->worker_id % 2 != 0)
 		usleep(1000);
-	while (coder->done == 0)
+	while (worker->finished == 0)
 	{
-		pthread_mutex_lock(&coder->sim->pause);
-		if (coder->sim->simulation_running == 0)
+		pthread_mutex_lock(&worker->ctx->state_lock);
+		if (worker->ctx->active == 0)
 		{
-			pthread_mutex_unlock(&coder->sim->pause);
+			pthread_mutex_unlock(&worker->ctx->state_lock);
 			break ;
 		}
-		pthread_mutex_unlock(&coder->sim->pause);
-		if (compile(coder))
+		pthread_mutex_unlock(&worker->ctx->state_lock);
+		if (run_compile(worker))
 			break ;
-		debug(coder);
-		refactor(coder);
+		run_debug(worker);
+		run_refactor(worker);
 	}
 	return (NULL);
 }
 
-void	coder_sleep(t_coder *coder, long duration)
+void	wait_interval(t_worker *worker, long delay_ms)
 {
-	long	start;
+	long	begin_ms;
 
-	start = get_time_ms();
-	while (get_time_ms() - start < duration)
+	begin_ms = clock_ms();
+	while (clock_ms() - begin_ms < delay_ms)
 	{
-		pthread_mutex_lock(&coder->sim->pause);
-		if (coder->sim->simulation_running == 0)
+		pthread_mutex_lock(&worker->ctx->state_lock);
+		if (worker->ctx->active == 0)
 		{
-			pthread_mutex_unlock(&coder->sim->pause);
+			pthread_mutex_unlock(&worker->ctx->state_lock);
 			return ;
 		}
-		pthread_mutex_unlock(&coder->sim->pause);
+		pthread_mutex_unlock(&worker->ctx->state_lock);
 		usleep(1000);
 	}
 }
 
-long	get_time_ms(void)
+long	clock_ms(void)
 {
-	struct timeval	tv;
+	struct timeval	stamp;
 
-	gettimeofday(&tv, NULL);
-	return (tv.tv_sec * 1000 + tv.tv_usec / 1000);
+	gettimeofday(&stamp, NULL);
+	return (stamp.tv_sec * 1000 + stamp.tv_usec / 1000);
 }

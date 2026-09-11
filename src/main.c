@@ -1,42 +1,42 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   main.c                                             :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: feel-idr <feel-idr@student.1337.ma>        +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/09/06 01:07:50 by feel-idr          #+#    #+#             */
-/*   Updated: 2026/09/06 01:07:52 by feel-idr         ###   ########.fr       */
+/*                                                       :::      ::::::::    */
+/*   main.c                                            :+:      :+:    :+:    */
+/*                                                   +:+ +:+         +:+      */
+/*   By: feel-idr <feel-idr@student.1337.ma>       +#+  +:+       +#+         */
+/*                                               +#+#+#+#+#+   +#+            */
+/*   Created: 2026/09/06 01:07:50 by feel-idr         #+#    #+#              */
+/*   Updated: 2026/09/11 00:00:00 by feel-idr        ###   ########.fr        */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "header.h"
 
-int	main(int argc, char **argv)
+int	main(int arg_count, char **arg_values)
 {
-	t_config		config;
-	t_simulation	sim;
-	pthread_t		monitor;
-	int				i;
+	t_options	opts;
+	t_context	ctx;
+	pthread_t	watchdog;
+	int			slot;
 
-	if (parse_args(argc, argv, &config)
-		|| init_simulation(&sim, &config))
+	if (read_arguments(arg_count, arg_values, &opts)
+		|| setup_context(&ctx, &opts))
 		return (1);
-	pthread_create(&monitor, NULL, monitor_routine, &sim);
-	i = 0;
-	while (i < config.nbr_of_coders)
+	pthread_create(&watchdog, NULL, watchdog_main, &ctx);
+	slot = 0;
+	while (slot < opts.worker_count)
 	{
-		pthread_create(&sim.coders[i].thread, NULL,
-			coder_routine, &sim.coders[i]);
-		i++;
+		pthread_create(&ctx.workers[slot].handle, NULL,
+			worker_main, &ctx.workers[slot]);
+		slot++;
 	}
-	i = 0;
-	while (i < config.nbr_of_coders)
+	slot = 0;
+	while (slot < opts.worker_count)
 	{
-		pthread_join(sim.coders[i].thread, NULL);
-		i++;
+		pthread_join(ctx.workers[slot].handle, NULL);
+		slot++;
 	}
-	pthread_join(monitor, NULL);
-	cleanup_simulation(&sim);
+	pthread_join(watchdog, NULL);
+	destroy_context(&ctx);
 	return (0);
 }

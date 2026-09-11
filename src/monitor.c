@@ -1,87 +1,90 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   monitor.c                                          :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: feel-idr <feel-idr@student.1337.ma>        +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/09/06 01:08:02 by feel-idr          #+#    #+#             */
-/*   Updated: 2026/09/06 01:08:03 by feel-idr         ###   ########.fr       */
+/*                                                       :::      ::::::::    */
+/*   monitor.c                                         :+:      :+:    :+:    */
+/*                                                   +:+ +:+         +:+      */
+/*   By: feel-idr <feel-idr@student.1337.ma>       +#+  +:+       +#+         */
+/*                                               +#+#+#+#+#+   +#+            */
+/*   Created: 2026/09/06 01:08:02 by feel-idr         #+#    #+#              */
+/*   Updated: 2026/09/11 00:00:00 by feel-idr        ###   ########.fr        */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "header.h"
 
-static int	check_burnout(t_simulation *sim, int i)
+static int	detect_burnout(t_context *ctx, int slot)
 {
-	long	last;
-	long	start;
-	int		burned_out;
-	int		coder_id;
+	long	last_ms;
+	long	begin_ms;
+	int		expired;
+	int		checked_id;
 
-	burned_out = 0;
-	pthread_mutex_lock(&sim->pause_print);
-	pthread_mutex_lock(&sim->pause);
-	last = sim->coders[i].last_compile;
-	if (last == 0)
-		last = sim->start_time;
-	if (sim->coders[i].done == 0
-		&& get_time_ms() - last > sim->config.time_to_burnout)
+	expired = 0;
+	pthread_mutex_lock(&ctx->output_lock);
+	pthread_mutex_lock(&ctx->state_lock);
+	last_ms = ctx->workers[slot].last_build_ms;
+	if (last_ms == 0)
+		last_ms = ctx->epoch_ms;
+	if (ctx->workers[slot].finished == 0
+		&& clock_ms() - last_ms > ctx->opts.burnout_ms)
 	{
-		sim->simulation_running = 0;
-		burned_out = 1;
+		ctx->active = 0;
+		expired = 1;
 	}
-	coder_id = sim->coders[i].id;
-	start = sim->start_time;
-	pthread_mutex_unlock(&sim->pause);
-	if (burned_out)
+	checked_id = ctx->workers[slot].worker_id;
+	begin_ms = ctx->epoch_ms;
+	pthread_mutex_unlock(&ctx->state_lock);
+	if (expired)
 		printf("%ld %d burned out\n",
-			get_time_ms() - start, coder_id);
-	pthread_mutex_unlock(&sim->pause_print);
-	return (burned_out);
+			clock_ms() - begin_ms, checked_id);
+	pthread_mutex_unlock(&ctx->output_lock);
+	return (expired);
 }
 
-static int	check_coders(t_simulation *sim)
+static int	scan_workers(t_context *ctx)
 {
-	int	i;
-	int	done_count;
+	int	slot;
+	int	finished_count;
 
-	i = 0;
-	done_count = 0;
-	while (i < sim->config.nbr_of_coders)
+	slot = 0;
+	finished_count = 0;
+	while (slot < ctx->opts.worker_count)
 	{
-		if (check_burnout(sim, i))
+		if (detect_burnout(ctx, slot))
 			return (-1);
-		pthread_mutex_lock(&sim->pause);
-		if (sim->coders[i].done == 1)
-			done_count++;
-		pthread_mutex_unlock(&sim->pause);
-		i++;
+		pthread_mutex_lock(&ctx->state_lock);
+		if (ctx->workers[slot].finished == 1)
+			finished_count++;
+		pthread_mutex_unlock(&ctx->state_lock);
+		slot++;
 	}
-	return (done_count);
+	return (finished_count);
 }
 
-void	*monitor_routine(void *arg)
+void	*watchdog_main(void *payload)
 {
-	t_simulation	*sim;
-	int				done_count;
+	t_context	*ctx;
+	int			finished_count;
 
-	sim = (t_simulation *)arg;
+	ctx = (t_context *)payload;
 	while (1)
 	{
-		pthread_mutex_lock(&sim->pause);
-		if (sim->simulation_running == 0)
-			return (pthread_mutex_unlock(&sim->pause), NULL);
-		pthread_mutex_unlock(&sim->pause);
-		usleep(1000);
-		done_count = check_coders(sim);
-		if (done_count == -1)
-			return (NULL);
-		if (done_count == sim->config.nbr_of_coders)
+		pthread_mutex_lock(&ctx->state_lock);
+		if (ctx->active == 0)
 		{
-			pthread_mutex_lock(&sim->pause);
-			sim->simulation_running = 0;
-			pthread_mutex_unlock(&sim->pause);
+			pthread_mutex_unlock(&ctx->state_lock);
+			return (NULL);
+		}
+		pthread_mutex_unlock(&ctx->state_lock);
+		usleep(1000);
+		finished_count = scan_workers(ctx);
+		if (finished_count == -1)
+			return (NULL);
+		if (finished_count == ctx->opts.worker_count)
+		{
+			pthread_mutex_lock(&ctx->state_lock);
+			ctx->active = 0;
+			pthread_mutex_unlock(&ctx->state_lock);
 			return (NULL);
 		}
 	}
