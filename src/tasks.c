@@ -1,52 +1,54 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                       :::      ::::::::    */
-/*   tasks.c                                           :+:      :+:    :+:    */
-/*                                                   +:+ +:+         +:+      */
-/*   By: feel-idr <feel-idr@student.1337.ma>       +#+  +:+       +#+         */
-/*                                               +#+#+#+#+#+   +#+            */
-/*   Created: 2026/09/06 01:08:20 by feel-idr         #+#    #+#              */
-/*   Updated: 2026/09/11 00:00:00 by feel-idr        ###   ########.fr        */
+/*                                                        :::      ::::::::   */
+/*   tasks.c                                            :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: feel-idr <feel-idr@student.1337.ma>        +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/09/06 01:08:20 by feel-idr          #+#    #+#             */
+/*   Updated: 2026/09/13 15:17:34 by feel-idr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "header.h"
 
-static void	log_devices(t_worker *worker)
+static void    log_dongle_take(t_worker *worker)
 {
-	long	elapsed_ms;
+    long    elapsed_ms;
 
-	pthread_mutex_lock(&worker->ctx->output_lock);
-	elapsed_ms = clock_ms() - worker->ctx->epoch_ms;
-	printf("%ld %d has taken a dongle\n", elapsed_ms, worker->worker_id);
-	printf("%ld %d has taken a dongle\n", elapsed_ms, worker->worker_id);
-	pthread_mutex_unlock(&worker->ctx->output_lock);
+    pthread_mutex_lock(&worker->ctx->output_lock);
+    elapsed_ms = clock_ms() - worker->ctx->epoch_ms;
+    printf("%ld %d has taken a dongle\n", elapsed_ms, worker->worker_id);
+    pthread_mutex_unlock(&worker->ctx->output_lock);
 }
 
-static int	acquire_pair(t_worker *worker)
+static int    acquire_pair(t_worker *worker)
 {
-	if (worker->worker_id % 2 == 0)
-	{
-		if (acquire_device(worker, worker->left_device))
-			return (1);
-		if (acquire_device(worker, worker->right_device))
-		{
-			release_device(worker->left_device);
-			return (1);
-		}
-	}
-	else
-	{
-		if (acquire_device(worker, worker->right_device))
-			return (1);
-		if (acquire_device(worker, worker->left_device))
-		{
-			release_device(worker->right_device);
-			return (1);
-		}
-	}
-	log_devices(worker);
-	return (0);
+    if (worker->worker_id % 2 == 0)
+    {
+        if (acquire_device(worker, worker->left_device))
+            return (1);
+        log_dongle_take(worker);
+        if (acquire_device(worker, worker->right_device))
+        {
+            release_device(worker->left_device);
+            return (1);
+        }
+        log_dongle_take(worker);
+    }
+    else
+    {
+        if (acquire_device(worker, worker->right_device))
+            return (1);
+        log_dongle_take(worker);
+        if (acquire_device(worker, worker->left_device))
+        {
+            release_device(worker->right_device);
+            return (1);
+        }
+        log_dongle_take(worker);
+    }
+    return (0);
 }
 
 int	run_compile(t_worker *worker)
