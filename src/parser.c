@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                       :::      ::::::::    */
-/*   parser.c                                          :+:      :+:    :+:    */
-/*                                                   +:+ +:+         +:+      */
-/*   By: feel-idr <feel-idr@student.1337.ma>       +#+  +:+       +#+         */
-/*                                               +#+#+#+#+#+   +#+            */
-/*   Created: 2026/09/06 01:08:09 by feel-idr         #+#    #+#              */
-/*   Updated: 2026/09/11 00:00:00 by feel-idr        ###   ########.fr        */
+/*                                                        :::      ::::::::   */
+/*   parser.c                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: feel-idr <feel-idr@student.1337.ma>        +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/09/06 01:08:09 by feel-idr          #+#    #+#             */
+/*   Updated: 2026/09/13 10:43:29 by feel-idr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,28 +58,28 @@ static int	read_policy(char *text, t_options *opts)
 	return (0);
 }
 
-int	read_arguments(int arg_count, char **arg_values, t_options *opts)
+int	read_arguments(int argc, char **argv, t_options *opts)
 {
-	if (arg_count != 9)
+	if (argc != 9)
 	{
-		fprintf(stderr, "Error: expected 8 arguments, got %d\n", arg_count - 1);
+		fprintf(stderr, "Error: expected 8 arguments, got %d\n", argc - 1);
 		return (1);
 	}
-	if (read_integer(arg_values[1], 1, &opts->worker_count,
+	if (read_integer(argv[1], 1, &opts->worker_count,
 			"number_of_coders")
-		|| read_integer(arg_values[2], 1, &opts->burnout_ms,
+		|| read_integer(argv[2], 1, &opts->burnout_ms,
 			"time_to_burnout")
-		|| read_integer(arg_values[3], 1, &opts->compile_ms,
+		|| read_integer(argv[3], 1, &opts->compile_ms,
 			"time_to_compile")
-		|| read_integer(arg_values[4], 1, &opts->debug_ms,
+		|| read_integer(argv[4], 1, &opts->debug_ms,
 			"time_to_debug")
-		|| read_integer(arg_values[5], 1, &opts->refactor_ms,
+		|| read_integer(argv[5], 1, &opts->refactor_ms,
 			"time_to_refactor")
-		|| read_integer(arg_values[6], 1, &opts->cycle_limit,
+		|| read_integer(argv[6], 1, &opts->cycle_limit,
 			"number_of_compiles_required")
-		|| read_integer(arg_values[7], 0, &opts->cooldown_ms,
+		|| read_integer(argv[7], 0, &opts->cooldown_ms,
 			"dongle_cooldown")
-		|| read_policy(arg_values[8], opts))
+		|| read_policy(argv[8], opts))
 		return (1);
 	return (0);
 }
