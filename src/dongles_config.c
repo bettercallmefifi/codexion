@@ -1,78 +1,79 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                       :::      ::::::::    */
-/*   dongles_config.c                                  :+:      :+:    :+:    */
-/*                                                   +:+ +:+         +:+      */
-/*   By: feel-idr <feel-idr@student.1337.ma>       +#+  +:+       +#+         */
-/*                                               +#+#+#+#+#+   +#+            */
-/*   Created: 2026/09/06 01:07:11 by feel-idr         #+#    #+#              */
-/*   Updated: 2026/09/11 00:00:00 by feel-idr        ###   ########.fr        */
+/*                                                        :::      ::::::::   */
+/*   dongles_config.c                                   :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: feel-idr <feel-idr@student.1337.ma>        +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/09/06 01:07:11 by feel-idr          #+#    #+#             */
+/*   Updated: 2026/09/06 01:07:12 by feel-idr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
+
 #include "header.h"
 
-static long	worker_deadline(t_worker *worker)
+static long	get_deadline(t_coder *coder)
 {
-	return (worker->last_build_ms
-		+ worker->ctx->opts.burnout_ms);
+	return (coder->last_compile
+		+ coder->sim->config.time_to_burnout);
 }
 
-static void	prepare_request(t_worker *worker, t_request *request)
+static void	set_deadline(t_coder *coder, t_edf *info)
 {
-	request->worker_id = worker->worker_id;
-	if (worker->ctx->opts.policy == POLICY_FIFO)
-		request->priority_ms = clock_ms();
+	info->id = coder->id;
+	if (coder->sim->config.scheduler == FIFO)
+		info->deadline = get_time_ms();
 	else
-		request->priority_ms = worker_deadline(worker);
+		info->deadline = get_deadline(coder);
 }
 
-static int	wait_device(t_worker *worker, t_device *device)
+static int	wait_dongle(t_coder *coder, t_dongle *dongle)
 {
 	while (1)
 	{
-		if (device->queued > 0
-			&& device->busy == 0
-			&& device->pending[0].worker_id == worker->worker_id
-			&& clock_ms() - device->released_ms
-			>= worker->ctx->opts.cooldown_ms)
+		if (dongle->size > 0
+			&& dongle->is_taken == 0
+			&& dongle->quee[0].id == coder->id
+			&& get_time_ms() - dongle->release
+			>= coder->sim->config.dongle_cooldown)
 			return (0);
-		pthread_mutex_unlock(&device->lock);
+		pthread_mutex_unlock(&dongle->pause_dongle);
 		usleep(1000);
-		pthread_mutex_lock(&worker->ctx->state_lock);
-		if (worker->ctx->active == 0)
+		pthread_mutex_lock(&coder->sim->pause);
+		if (coder->sim->simulation_running == 0)
 		{
-			pthread_mutex_unlock(&worker->ctx->state_lock);
-			pthread_mutex_lock(&device->lock);
+			pthread_mutex_unlock(&coder->sim->pause);
+			pthread_mutex_lock(&dongle->pause_dongle);
 			return (1);
 		}
-		pthread_mutex_unlock(&worker->ctx->state_lock);
-		pthread_mutex_lock(&device->lock);
+		pthread_mutex_unlock(&coder->sim->pause);
+		pthread_mutex_lock(&dongle->pause_dongle);
 	}
 }
 
-int	acquire_device(t_worker *worker, t_device *device)
+int	take_dongle(t_coder *coder, t_dongle *dongle)
 {
-	t_request	request;
+	t_edf	info;
 
-	pthread_mutex_lock(&device->lock);
-	prepare_request(worker, &request);
-	queue_push(device, request);
-	if (wait_device(worker, device))
+	pthread_mutex_lock(&dongle->pause_dongle);
+	set_deadline(coder, &info);
+	insert_heap(dongle, info);
+	if (wait_dongle(coder, dongle))
 	{
-		pthread_mutex_unlock(&device->lock);
+		pthread_mutex_unlock(&dongle->pause_dongle);
 		return (1);
 	}
-	queue_pop(device);
-	device->busy = 1;
-	pthread_mutex_unlock(&device->lock);
+	pop_heap(dongle);
+	dongle->is_taken = 1;
+	pthread_mutex_unlock(&dongle->pause_dongle);
 	return (0);
 }
 
-void	release_device(t_device *device)
+void	release_dongle(t_dongle *dongle)
 {
-	pthread_mutex_lock(&device->lock);
-	device->busy = 0;
-	device->released_ms = clock_ms();
-	pthread_mutex_unlock(&device->lock);
+	pthread_mutex_lock(&dongle->pause_dongle);
+	dongle->is_taken = 0;
+	dongle->release = get_time_ms();
+	pthread_mutex_unlock(&dongle->pause_dongle);
 }

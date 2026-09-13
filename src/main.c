@@ -6,7 +6,7 @@
 /*   By: feel-idr <feel-idr@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/06 01:07:50 by feel-idr          #+#    #+#             */
-/*   Updated: 2026/09/12 12:40:33 by feel-idr         ###   ########.fr       */
+/*   Updated: 2026/09/06 01:07:52 by feel-idr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,29 +14,29 @@
 
 int	main(int argc, char **argv)
 {
-	t_options	opts;
-	t_context	ctx;
-	pthread_t	watchdog;
-	int			slot;
+	t_config		config;
+	t_simulation	sim;
+	pthread_t		monitor;
+	int				i;
 
-	if (read_arguments(argc, argv, &opts)
-		|| setup_context(&ctx, &opts))
+	if (parse_args(argc, argv, &config)
+		|| init_simulation(&sim, &config))
 		return (1);
-	pthread_create(&watchdog, NULL, watchdog_main, &ctx);
-	slot = 0;
-	while (slot < opts.worker_count)
+	pthread_create(&monitor, NULL, monitor_routine, &sim);
+	i = 0;
+	while (i < config.nbr_of_coders)
 	{
-		pthread_create(&ctx.workers[slot].handle, NULL,
-			worker_main, &ctx.workers[slot]);
-		slot++;
+		pthread_create(&sim.coders[i].thread, NULL,
+			coder_routine, &sim.coders[i]);
+		i++;
 	}
-	slot = 0;
-	while (slot < opts.worker_count)
+	i = 0;
+	while (i < config.nbr_of_coders)
 	{
-		pthread_join(ctx.workers[slot].handle, NULL);
-		slot++;
+		pthread_join(sim.coders[i].thread, NULL);
+		i++;
 	}
-	pthread_join(watchdog, NULL);
-	destroy_context(&ctx);
+	pthread_join(monitor, NULL);
+	cleanup_simulation(&sim);
 	return (0);
 }

@@ -6,111 +6,109 @@
 /*   By: feel-idr <feel-idr@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/06 01:08:20 by feel-idr          #+#    #+#             */
-/*   Updated: 2026/09/13 15:17:34 by feel-idr         ###   ########.fr       */
+/*   Updated: 2026/09/06 01:08:21 by feel-idr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "header.h"
 
-static void    log_dongle_take(t_worker *worker)
+static void	print_took_dongles(t_coder *coder)
 {
-    long    elapsed_ms;
+	long	ts;
 
-    pthread_mutex_lock(&worker->ctx->output_lock);
-    elapsed_ms = clock_ms() - worker->ctx->epoch_ms;
-    printf("%ld %d has taken a dongle\n", elapsed_ms, worker->worker_id);
-    pthread_mutex_unlock(&worker->ctx->output_lock);
+	pthread_mutex_lock(&coder->sim->pause_print);
+	ts = get_time_ms() - coder->sim->start_time;
+	printf("%ld %d has taken a dongle\n", ts, coder->id);
+	printf("%ld %d has taken a dongle\n", ts, coder->id);
+	pthread_mutex_unlock(&coder->sim->pause_print);
 }
 
-static int    acquire_pair(t_worker *worker)
+static int	take_dongles(t_coder *coder)
 {
-    if (worker->worker_id % 2 == 0)
-    {
-        if (acquire_device(worker, worker->left_device))
-            return (1);
-        log_dongle_take(worker);
-        if (acquire_device(worker, worker->right_device))
-        {
-            release_device(worker->left_device);
-            return (1);
-        }
-        log_dongle_take(worker);
-    }
-    else
-    {
-        if (acquire_device(worker, worker->right_device))
-            return (1);
-        log_dongle_take(worker);
-        if (acquire_device(worker, worker->left_device))
-        {
-            release_device(worker->right_device);
-            return (1);
-        }
-        log_dongle_take(worker);
-    }
-    return (0);
-}
-
-int	run_compile(t_worker *worker)
-{
-	long	compile_begin;
-
-	if (acquire_pair(worker))
-		return (1);
-	compile_begin = clock_ms();
-	pthread_mutex_lock(&worker->ctx->output_lock);
-	printf("%ld %d is compiling\n",
-		compile_begin - worker->ctx->epoch_ms, worker->worker_id);
-	pthread_mutex_unlock(&worker->ctx->output_lock);
-	pthread_mutex_lock(&worker->ctx->state_lock);
-	worker->last_build_ms = compile_begin;
-	worker->build_count++;
-	pthread_mutex_unlock(&worker->ctx->state_lock);
-	wait_interval(worker, worker->ctx->opts.compile_ms);
-	release_device(worker->left_device);
-	release_device(worker->right_device);
+	if (coder->id % 2 == 0)
+	{
+		if (take_dongle(coder, coder->left_dongle))
+			return (1);
+		if (take_dongle(coder, coder->right_dongle))
+		{
+			release_dongle(coder->left_dongle);
+			return (1);
+		}
+	}
+	else
+	{
+		if (take_dongle(coder, coder->right_dongle))
+			return (1);
+		if (take_dongle(coder, coder->left_dongle))
+		{
+			release_dongle(coder->right_dongle);
+			return (1);
+		}
+	}
+	print_took_dongles(coder);
 	return (0);
 }
 
-void	run_debug(t_worker *worker)
+int	compile(t_coder *coder)
 {
-	long	debug_begin;
+	long	compile_start;
 
-	pthread_mutex_lock(&worker->ctx->state_lock);
-	if (worker->ctx->active == 0)
-	{
-		pthread_mutex_unlock(&worker->ctx->state_lock);
-		return ;
-	}
-	pthread_mutex_unlock(&worker->ctx->state_lock);
-	debug_begin = clock_ms();
-	pthread_mutex_lock(&worker->ctx->output_lock);
-	printf("%ld %d is debugging\n",
-		debug_begin - worker->ctx->epoch_ms, worker->worker_id);
-	pthread_mutex_unlock(&worker->ctx->output_lock);
-	wait_interval(worker, worker->ctx->opts.debug_ms);
+	if (take_dongles(coder))
+		return (1);
+	compile_start = get_time_ms();
+	pthread_mutex_lock(&coder->sim->pause_print);
+	printf("%ld %d is compiling\n",
+		compile_start - coder->sim->start_time, coder->id);
+	pthread_mutex_unlock(&coder->sim->pause_print);
+	pthread_mutex_lock(&coder->sim->pause);
+	coder->last_compile = compile_start;
+	coder->nbr_of_compilations++;
+	pthread_mutex_unlock(&coder->sim->pause);
+	coder_sleep(coder, coder->sim->config.time_to_compile);
+	release_dongle(coder->left_dongle);
+	release_dongle(coder->right_dongle);
+	return (0);
 }
 
-void	run_refactor(t_worker *worker)
+void	debug(t_coder *coder)
 {
-	long	refactor_begin;
+	long	debug_start;
 
-	pthread_mutex_lock(&worker->ctx->state_lock);
-	if (worker->ctx->active == 0)
+	pthread_mutex_lock(&coder->sim->pause);
+	if (coder->sim->simulation_running == 0)
 	{
-		pthread_mutex_unlock(&worker->ctx->state_lock);
+		pthread_mutex_unlock(&coder->sim->pause);
 		return ;
 	}
-	pthread_mutex_unlock(&worker->ctx->state_lock);
-	refactor_begin = clock_ms();
-	pthread_mutex_lock(&worker->ctx->output_lock);
+	pthread_mutex_unlock(&coder->sim->pause);
+	debug_start = get_time_ms();
+	pthread_mutex_lock(&coder->sim->pause_print);
+	printf("%ld %d is debugging\n",
+		debug_start - coder->sim->start_time, coder->id);
+	pthread_mutex_unlock(&coder->sim->pause_print);
+	coder_sleep(coder, coder->sim->config.time_to_debug);
+}
+
+void	refactor(t_coder *coder)
+{
+	long	refactor_start;
+
+	pthread_mutex_lock(&coder->sim->pause);
+	if (coder->sim->simulation_running == 0)
+	{
+		pthread_mutex_unlock(&coder->sim->pause);
+		return ;
+	}
+	pthread_mutex_unlock(&coder->sim->pause);
+	refactor_start = get_time_ms();
+	pthread_mutex_lock(&coder->sim->pause_print);
 	printf("%ld %d is refactoring\n",
-		refactor_begin - worker->ctx->epoch_ms, worker->worker_id);
-	pthread_mutex_unlock(&worker->ctx->output_lock);
-	wait_interval(worker, worker->ctx->opts.refactor_ms);
-	pthread_mutex_lock(&worker->ctx->state_lock);
-	if (worker->build_count
-		== worker->ctx->opts.cycle_limit)
-		worker->finished = 1;
-	pthread_mutex_unlock(&worker->ctx->state_lock);
+		refactor_start - coder->sim->start_time, coder->id);
+	pthread_mutex_unlock(&coder->sim->pause_print);
+	coder_sleep(coder, coder->sim->config.time_to_refactor);
+	pthread_mutex_lock(&coder->sim->pause);
+	if (coder->nbr_of_compilations
+		== coder->sim->config.nbr_of_compiles_required)
+		coder->done = 1;
+	pthread_mutex_unlock(&coder->sim->pause);
 }

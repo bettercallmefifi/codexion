@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
-/*                                                       :::      ::::::::    */
-/*   header.h                                          :+:      :+:    :+:    */
-/*                                                   +:+ +:+         +:+      */
-/*   By: feel-idr <feel-idr@student.1337.ma>       +#+  +:+       +#+         */
-/*                                               +#+#+#+#+#+   +#+            */
-/*   Created: 2026/09/06 01:07:29 by feel-idr         #+#    #+#              */
-/*   Updated: 2026/09/11 00:00:00 by feel-idr        ###   ########.fr        */
+/*                                                        :::      ::::::::   */
+/*   header.h                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: feel-idr <feel-idr@student.1337.ma>        +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/09/06 01:07:29 by feel-idr          #+#    #+#             */
+/*   Updated: 2026/09/06 01:07:31 by feel-idr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,78 +20,78 @@
 # include <string.h>
 # include <sys/time.h>
 
-typedef struct s_context	t_context;
+typedef struct s_simulation	t_simulation;
 
-typedef enum e_policy
+typedef enum e_scheduler
 {
-	POLICY_FIFO,
-	POLICY_EDF
-}	t_policy;
+	FIFO,
+	EDF
+}	t_scheduler;
 
-typedef struct s_request
+typedef struct s_edf
 {
-	int		worker_id;
-	long	priority_ms;
-}	t_request;
+	int		id;
+	long	deadline;
+}	t_edf;
 
-typedef struct s_options
+typedef struct s_config
 {
-	int			worker_count;
-	int			burnout_ms;
-	int			compile_ms;
-	int			debug_ms;
-	int			refactor_ms;
-	int			cycle_limit;
-	int			cooldown_ms;
-	t_policy	policy;
-}	t_options;
+	int			nbr_of_coders;
+	int			time_to_burnout;
+	int			time_to_compile;
+	int			time_to_debug;
+	int			time_to_refactor;
+	int			nbr_of_compiles_required;
+	int			dongle_cooldown;
+	t_scheduler	scheduler;
+}	t_config;
 
-typedef struct s_device
+typedef struct s_dongle
 {
-	pthread_mutex_t	lock;
-	t_request		pending[2];
-	int				queued;
-	int				busy;
-	long			released_ms;
-}	t_device;
+	pthread_mutex_t	pause_dongle;
+	t_edf			quee[2];
+	int				size;
+	int				is_taken;
+	long			release;
+}	t_dongle;
 
-typedef struct s_worker
+typedef struct s_coder
 {
-	int			worker_id;
-	int			finished;
-	pthread_t	handle;
-	t_device	*left_device;
-	t_device	*right_device;
-	long		last_build_ms;
-	int			build_count;
-	t_context	*ctx;
-}	t_worker;
+	int				id;
+	int				done;
+	pthread_t		thread;
+	t_dongle		*left_dongle;
+	t_dongle		*right_dongle;
+	long			last_compile;
+	int				nbr_of_compilations;
+	t_simulation	*sim;
+}	t_coder;
 
-typedef struct s_context
+typedef struct s_simulation
 {
-	pthread_mutex_t	output_lock;
-	pthread_mutex_t	state_lock;
-	t_options		opts;
-	t_worker		*workers;
-	t_device		*devices;
-	int				active;
-	long			epoch_ms;
-}	t_context;
+	pthread_mutex_t	pause_print;
+	pthread_mutex_t	pause;
+	t_config		config;
+	t_coder			*coders;
+	t_dongle		*dongles;
+	int				simulation_running;
+	long			start_time;
+}	t_simulation;
 
-int			read_arguments(int arg_count, char **arg_values, t_options *opts);
-int			setup_context(t_context *ctx, t_options *opts);
-void		destroy_context(t_context *ctx);
-void		*worker_main(void *payload);
-int			acquire_device(t_worker *worker, t_device *device);
-void		release_device(t_device *device);
-long		clock_ms(void);
-void		queue_push(t_device *device, t_request request);
-void		queue_sift_down(t_device *device);
-t_request	queue_pop(t_device *device);
-int			run_compile(t_worker *worker);
-void		run_debug(t_worker *worker);
-void		run_refactor(t_worker *worker);
-void		*watchdog_main(void *payload);
-void		wait_interval(t_worker *worker, long delay_ms);
+int		parse_args(int argc, char **argv, t_config *config);
+int		init_simulation(t_simulation *sim, t_config *config);
+void	cleanup_simulation(t_simulation *sim);
+void	*coder_routine(void *arg);
+int		take_dongle(t_coder *coder, t_dongle *dongle);
+void	release_dongle(t_dongle *dongle);
+long	get_time_ms(void);
+void	insert_heap(t_dongle *dongle, t_edf info);
+void	insert_down(t_dongle *dongle);
+t_edf	pop_heap(t_dongle *dongle);
+int		compile(t_coder *coder);
+void	debug(t_coder *coder);
+void	refactor(t_coder *coder);
+void	*monitor_routine(void *arg);
+void	coder_sleep(t_coder *coder, long duration);
 
 #endif

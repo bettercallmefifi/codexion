@@ -6,50 +6,50 @@
 /*   By: feel-idr <feel-idr@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/06 01:08:09 by feel-idr          #+#    #+#             */
-/*   Updated: 2026/09/13 10:43:29 by feel-idr         ###   ########.fr       */
+/*   Updated: 2026/09/06 01:08:10 by feel-idr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "header.h"
 
-static int	has_digits(char *text)
+static int	is_positive_number(char *str)
 {
-	int	slot;
+	int	i;
 
-	if (!text || !text[0])
+	if (!str || !str[0])
 		return (0);
-	slot = 0;
-	while (text[slot])
+	i = 0;
+	while (str[i])
 	{
-		if (text[slot] < '0' || text[slot] > '9')
+		if (str[i] < '0' || str[i] > '9')
 			return (0);
-		slot++;
+		i++;
 	}
 	return (1);
 }
 
-static int	read_integer(char *text, int lower_bound, int *parsed, char *label)
+static int	parse_number(char *str, int min, int *value, char *name)
 {
-	if (!has_digits(text))
+	if (!is_positive_number(str))
 	{
-		fprintf(stderr, "Error: '%s' must be a positive integer\n", label);
+		fprintf(stderr, "Error: '%s' must be a positive integer\n", name);
 		return (1);
 	}
-	*parsed = atoi(text);
-	if (*parsed < lower_bound)
+	*value = atoi(str);
+	if (*value < min)
 	{
-		fprintf(stderr, "Error: '%s' must be >= %d\n", label, lower_bound);
+		fprintf(stderr, "Error: '%s' must be >= %d\n", name, min);
 		return (1);
 	}
 	return (0);
 }
 
-static int	read_policy(char *text, t_options *opts)
+static int	parse_scheduler(char *str, t_config *config)
 {
-	if (strcmp(text, "fifo") == 0)
-		opts->policy = POLICY_FIFO;
-	else if (strcmp(text, "edf") == 0)
-		opts->policy = POLICY_EDF;
+	if (strcmp(str, "fifo") == 0)
+		config->scheduler = FIFO;
+	else if (strcmp(str, "edf") == 0)
+		config->scheduler = EDF;
 	else
 	{
 		fprintf(stderr, "Error: scheduler must be 'fifo' or 'edf'\n");
@@ -58,28 +58,28 @@ static int	read_policy(char *text, t_options *opts)
 	return (0);
 }
 
-int	read_arguments(int argc, char **argv, t_options *opts)
+int	parse_args(int argc, char **argv, t_config *config)
 {
 	if (argc != 9)
 	{
 		fprintf(stderr, "Error: expected 8 arguments, got %d\n", argc - 1);
 		return (1);
 	}
-	if (read_integer(argv[1], 1, &opts->worker_count,
+	if (parse_number(argv[1], 1, &config->nbr_of_coders,
 			"number_of_coders")
-		|| read_integer(argv[2], 1, &opts->burnout_ms,
+		|| parse_number(argv[2], 1, &config->time_to_burnout,
 			"time_to_burnout")
-		|| read_integer(argv[3], 1, &opts->compile_ms,
+		|| parse_number(argv[3], 1, &config->time_to_compile,
 			"time_to_compile")
-		|| read_integer(argv[4], 1, &opts->debug_ms,
+		|| parse_number(argv[4], 1, &config->time_to_debug,
 			"time_to_debug")
-		|| read_integer(argv[5], 1, &opts->refactor_ms,
+		|| parse_number(argv[5], 1, &config->time_to_refactor,
 			"time_to_refactor")
-		|| read_integer(argv[6], 1, &opts->cycle_limit,
+		|| parse_number(argv[6], 1, &config->nbr_of_compiles_required,
 			"number_of_compiles_required")
-		|| read_integer(argv[7], 0, &opts->cooldown_ms,
+		|| parse_number(argv[7], 0, &config->dongle_cooldown,
 			"dongle_cooldown")
-		|| read_policy(argv[8], opts))
+		|| parse_scheduler(argv[8], config))
 		return (1);
 	return (0);
 }
