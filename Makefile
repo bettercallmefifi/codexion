@@ -1,30 +1,28 @@
-NAME	= codexion
+NAME		= codexion
 
-CC		= cc
-CFLAGS	= -Wall -Wextra -Werror -pthread
-HEADER	= src/header.h
+CC			= cc
+CFLAGS		= -Wall -Wextra -Werror -pthread
+INC_DIR		= includes
+SRC_DIR		= src
+OBJ_DIR		= obj
 
-SRC		= src/main.c \
-		  src/parser.c \
-		  src/init.c \
-		  src/coder.c \
-		  src/dongles_config.c \
-		  src/heap.c \
-		  src/monitor.c \
-		  src/tasks.c
-
-OBJ		= $(SRC:.c=.o)
+SRCS		= main.c parse.c init.c cleanup.c time_utils.c log.c \
+			  heap.c heap_utils.c dongle.c dongle_pair.c coder.c monitor.c
+OBJS		= $(addprefix $(OBJ_DIR)/, $(SRCS:.c=.o))
 
 all: $(NAME)
 
-$(NAME): $(OBJ)
-	$(CC) $(CFLAGS) $(OBJ) -o $(NAME)
+$(NAME): $(OBJS)
+	$(CC) $(CFLAGS) $(OBJS) -o $(NAME)
 
-%.o: %.c $(HEADER)
-	$(CC) $(CFLAGS) -c $< -o $@
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(INC_DIR)/codexion.h | $(OBJ_DIR)
+	$(CC) $(CFLAGS) -I$(INC_DIR) -c $< -o $@
+
+$(OBJ_DIR):
+	mkdir -p $(OBJ_DIR)
 
 clean:
-	rm -f $(OBJ)
+	rm -rf $(OBJ_DIR)
 
 fclean: clean
 	rm -f $(NAME)
