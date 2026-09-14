@@ -14,11 +14,11 @@
 
 static int	usage_error(void)
 {
-	fprintf(stderr, "Usage: ./codexion number_of_coders time_to_burnout ");
-	fprintf(stderr, "time_to_compile time_to_debug time_to_refactor ");
-	fprintf(stderr, "number_of_compiles_required dongle_cooldown <fifo|edf>\n");
-	fprintf(stderr, "Values must be integers >= 0, time_to_burnout > 0, ");
-	fprintf(stderr, "number_of_coders between 1 and %d.\n", MAX_CODERS);
+	fprintf(stderr, "Usage: ./codexion number_of_coders time_to_burnout "
+		"time_to_compile time_to_debug time_to_refactor "
+		"number_of_compiles_required dongle_cooldown <fifo|edf>\n"
+		"Values must be integers >= 0, time_to_burnout > 0, "
+		"number_of_coders between 1 and %d.\n", MAX_CODERS);
 	return (0);
 }
 
