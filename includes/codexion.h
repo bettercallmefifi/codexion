@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   codexion.h                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: feel-idr <feel-idr@student.42.fr>          +#+  +:+       +#+        */
+/*   By: feel-idr <feel-idr@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/13 19:48:00 by feel-idr          #+#    #+#             */
-/*   Updated: 2026/09/13 19:48:00 by feel-idr         ###   ########.fr       */
+/*   Updated: 2026/09/15 06:49:11 by feel-idr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,6 +21,7 @@
 # include <unistd.h>
 
 # define MAX_CODERS 200
+# define HEAP_CAPACITY 2
 # define MODE_FIFO 0
 # define MODE_EDF 1
 
@@ -90,7 +91,7 @@ void		ms_to_timespec(long long ms, struct timespec *ts);
 void		precise_sleep(t_sim *sim, long long ms);
 void		log_state(t_coder *coder, const char *msg);
 void		log_burnout(t_coder *coder);
-int			heap_init(t_heap *heap, int capacity, int mode);
+int			heap_init(t_heap *heap, int mode);
 void		heap_free(t_heap *heap);
 int			heap_push(t_heap *heap, t_request req);
 int			heap_pop(t_heap *heap);

@@ -6,7 +6,7 @@
 /*   By: feel-idr <feel-idr@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/13 19:48:00 by feel-idr          #+#    #+#             */
-/*   Updated: 2026/09/15 06:11:23 by feel-idr         ###   ########.fr       */
+/*   Updated: 2026/09/15 06:49:38 by feel-idr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,7 +20,7 @@ static int	init_dongles(t_sim *sim)
 	memset(sim->dongles, 0, sizeof(t_dongle) * sim->nb_coders);
 	while (sim->ready < sim->nb_coders)
 	{
-		if (!heap_init(&sim->dongles[sim->ready].queue, sim->nb_coders, sim->mode))
+		if (!heap_init(&sim->dongles[sim->ready].queue, sim->mode))
 			return (0);
 		pthread_mutex_init(&sim->dongles[sim->ready].lock, NULL);
 		pthread_cond_init(&sim->dongles[sim->ready].cond, NULL);
