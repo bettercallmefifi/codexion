@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   init.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: feel-idr <feel-idr@student.42.fr>          +#+  +:+       +#+        */
+/*   By: feel-idr <feel-idr@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/09/13 19:48:00 by feel-idr          #+#    #+#             */
-/*   Updated: 2026/09/13 19:48:00 by feel-idr         ###   ########.fr       */
+/*   Updated: 2026/09/15 04:36:00 by feel-idr         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,15 +20,13 @@ static int	init_dongles(t_sim *sim)
 	if (!sim->dongles)
 		return (0);
 	memset(sim->dongles, 0, sizeof(t_dongle) * sim->nb_coders);
-	i = 0;
-	while (i < sim->nb_coders)
+	while (sim->ready < sim->nb_coders)
 	{
 		if (!heap_init(&sim->dongles[i].queue, sim->nb_coders, sim->mode))
 			return (0);
 		pthread_mutex_init(&sim->dongles[i].lock, NULL);
 		pthread_cond_init(&sim->dongles[i].cond, NULL);
-		sim->ready = i + 1;
-		i++;
+		sim->ready++;
 	}
 	return (1);
 }
