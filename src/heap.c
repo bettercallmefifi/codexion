@@ -23,3 +23,28 @@ int	heap_init(t_heap *heap, int mode)
 	heap->mode = mode;
 	return (1);
 }
+
+void	heap_free(t_heap *heap)
+{
+	free(heap->data);
+	heap->data = NULL;
+	heap->size = 0;
+	heap->capacity = 0;
+}
+
+int	heap_push(t_heap *heap, t_request req)
+{
+	if (heap->size == 0)
+		return (0);
+	heap->size--;
+	heap->data[0] = heap->data[heap->size];
+	sift_down(heap, 0);
+	return (1);
+}
+
+t_request	*heap_peek(t_heap *heap)
+{
+	if (heap->size == 0)
+		return (NULL);
+	return (&heap->data[0]);
+}
