@@ -25,30 +25,38 @@ static t_request	build_request(t_coder *coder)
 	return (req);
 }
 
-static int	dongle_ready(t_dongle *dongle, t_coder *coder)
+static int	dongle_state(t_dongle *dongle, t_coder *coder)
 {
 	t_request	*top;
 
 	if (dongle->taken)
 		return (0);
-	if (now_ms() < dongle->free_at)
-		return (0);
 	top = heap_peek(&dongle->queue);
-	if (!top)
+	if (!top || top->id != coder->id)
 		return (0);
-	return (top->id == coder->id);
+	if (now_ms() < dongle->free_at)
+		return (2);
+	return (1);
 }
 
 static int	wait_for_turn(t_coder *coder, t_dongle *dongle)
 {
-	struct timespec	ts;
+	int	state;
 
-	while (!dongle_ready(dongle, coder))
+	state = dongle_state(dongle, coder);
+	while (state != 1)
 	{
 		if (!sim_running(coder->sim))
 			return (0);
-		ms_to_timespec(now_ms() + 1, &ts);
-		pthread_cond_timedwait(&dongle->cond, &dongle->lock, &ts);
+		if (state == 2)
+		{
+			pthread_mutex_unlock(&dongle->lock);
+			usleep(200);
+			pthread_mutex_lock(&dongle->lock);
+		}
+		else
+			pthread_cond_wait(&dongle->cond, &dongle->lock);
+		state = dongle_state(dongle, coder);
 	}
 	return (1);
 }
