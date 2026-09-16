@@ -26,3 +26,13 @@ void	log_state(t_coder *coder, const char *msg)
 	pthread_mutex_unlock(&coder->sim->state);
 	pthread_mutex_unlock(&coder->sim->print);
 }
+
+void	log_burnout(t_coder *coder)
+{
+	long long	stamp;
+
+	pthread_mutex_lock(&coder->sim->print);
+	stamp = now_ms() - coder->sim->start;
+	printf("%lld %d burned out\n", stamp, coder->id);
+	pthread_mutex_unlock(&coder->sim->print);
+}
