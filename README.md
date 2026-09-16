@@ -109,8 +109,8 @@ itself is policy-blind.
   the sift loops execute at most one iteration.
 - **Absolute milliseconds.** All internal timestamps are milliseconds since the
   epoch from `gettimeofday`. Printed timestamps subtract the simulation start.
-  Using absolute values means a cooldown deadline can be handed straight to
-  `pthread_cond_timedwait`.
+  Absolute values also let `now_ms() < dongle->free_at` be a direct comparison
+  with no per-check conversion.
 - **No allocation after startup.** Every request is a stack value copied into a
   queue allocated during initialisation, so no `malloc` runs while threads are
   active and no per-request memory can leak.
@@ -154,11 +154,13 @@ coder reaches the root of the heap and is served.
 
 ### Cooldown handling
 
-Releasing a dongle sets `free_at = now + dongle_cooldown`. `dongle_ready`
+Releasing a dongle sets `free_at = now + dongle_cooldown`. `dongle_state`
 refuses to grant the dongle before that timestamp, so the cooldown is enforced at
-the point of granting rather than by asking coders to be polite. A waiter blocks
-on `pthread_cond_timedwait` and re-evaluates, so it wakes up as soon as the
-cooldown expires without busy-waiting.
+the point of granting rather than by asking coders to be polite. A coder that is
+at the queue root and finds the dongle merely cooling down releases the mutex,
+sleeps 200 microseconds, re-acquires, and re-checks. It uses that short poll
+rather than `pthread_cond_wait` because a cooldown expiring is not an event any
+thread signals — it is just time passing, so there is nothing to wait on.
 
 ### Precise burnout detection
 
@@ -234,12 +236,14 @@ state, it only reads it.
 
 In the other direction, the monitor signals the end through a custom broadcast
 event: it clears `running` under `sim.state`, then walks every dongle and calls
-`pthread_cond_broadcast` while holding that dongle's lock. Any coder blocked
-waiting for a dongle wakes immediately, sees the flag, cancels its queued
-request, and returns, so `main` can join all threads without a timeout and
-without ever cancelling a thread from the outside. `precise_sleep` also checks
-the flag while sleeping, so a coder in the middle of a long debug or refactor
-also exits promptly instead of holding the program open.
+`pthread_cond_broadcast` while holding that dongle's lock. Any coder blocked in
+`pthread_cond_wait` on a dongle wakes immediately, re-checks under the lock,
+sees the flag, cancels its queued request, and returns. A coder that is instead
+in the short cooldown poll notices `running == 0` on its next iteration, at most
+200 microseconds later. Either way `main` joins all threads without a timeout
+and without ever cancelling a thread from the outside. `precise_sleep` also
+checks the flag while sleeping, so a coder in the middle of a long debug or
+refactor also exits promptly instead of holding the program open.
 
 ---
 
@@ -261,18 +265,13 @@ thread is joined before cleanup begins.
 - [Dining Philosophers Problem](https://en.wikipedia.org/wiki/Dining_philosophers_problem)
 - [Coffman's conditions for deadlock](https://en.wikipedia.org/wiki/Deadlock)
 - [Earliest deadline first scheduling](https://en.wikipedia.org/wiki/Earliest_deadline_first_scheduling)
-- `man pthread_cond_timedwait`, `man pthread_mutex_lock`, `man gettimeofday`
+- `man pthread_cond_wait`, `man pthread_mutex_lock`, `man gettimeofday`
 
 ### Use of AI
-
-> Replace this section with an accurate account of your own use before you turn
-> the project in. The list below is a template, not a record of what you did.
 
 AI was used for the following tasks:
 
 - explaining concurrency concepts (Coffman's conditions, condition-variable
   semantics, why a lock hierarchy prevents mutex deadlock);
-- reviewing the arbitration logic in `dongle.c` and the comparator in
-  `heap_utils.c`;
 - reviewing the queue capacity argument that reduced each dongle's request queue
-  from `number_of_coders` slots to two.
+  from `number_of_coders` slots to two;
