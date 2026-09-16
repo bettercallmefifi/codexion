@@ -83,4 +83,31 @@ struct	s_sim
 	pthread_mutex_t	print;
 };
 
+int			parse_args(t_sim *sim, int ac, char **av);
+int			init_sim(t_sim *sim);
+void		destroy_sim(t_sim *sim);
+long long	now_ms(void);
+void		ms_to_timespec(long long ms, struct timespec *ts);
+void		precise_sleep(t_sim *sim, long long ms);
+void		log_state(t_coder *coder, const char *msg);
+void		log_burnout(t_coder *coder);
+int			heap_init(t_heap *heap, int mode);
+void		heap_free(t_heap *heap);
+int			heap_push(t_heap *heap, t_request req);
+int			heap_pop(t_heap *heap);
+t_request	*heap_peek(t_heap *heap);
+int			heap_less(t_heap *heap, t_request *a, t_request *b);
+void		heap_swap(t_request *a, t_request *b);
+void		sift_up(t_heap *heap, int i);
+void		sift_down(t_heap *heap, int i);
+int			heap_remove(t_heap *heap, int id);
+int			take_dongle(t_coder *coder, t_dongle *dongle);
+void		drop_dongle(t_sim *sim, t_dongle *dongle);
+int			take_two(t_coder *coder);
+void		drop_two(t_coder *coder);
+void		*coder_routine(void *arg);
+void		*monitor_routine(void *arg);
+int			sim_running(t_sim *sim);
+void		stop_sim(t_sim *sim);
+
 #endif
