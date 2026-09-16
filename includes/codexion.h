@@ -25,14 +25,14 @@
 # define MODE_FIFO 0
 # define MODE_EDF 1
 
-typedef struct	s_request
+typedef struct s_request
 {
 	int			id;
 	long long	seq;
-	long long deadline;
+	long long	deadline;
 }	t_request;
 
-typedef struct	s_heap
+typedef struct s_heap
 {
 	t_request	*data;
 	int			size;
@@ -40,7 +40,7 @@ typedef struct	s_heap
 	int			mode;
 }	t_heap;
 
-typedef struct	s_dongle
+typedef struct s_dongle
 {
 	int				teken;
 	long long		free_at;
@@ -51,7 +51,7 @@ typedef struct	s_dongle
 
 typedef struct s_sim	t_sim;
 
-typedef struct	s_coder
+typedef struct s_coder
 {
 	int			id;
 	int			left;
@@ -83,5 +83,4 @@ struct	s_sim
 	pthread_mutex_t	print;
 };
 
-
-
+#endif
