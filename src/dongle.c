@@ -41,13 +41,13 @@ static int	dongle_ready(t_dongle *dongle, t_coder *coder)
 
 static int	wait_for_turn(t_coder *coder, t_dongle *dongle)
 {
-	struct timespac	ts;
+	struct timespec	ts;
 
 	while (!dongle_ready(dongle, coder))
 	{
 		if (!sim_running(coder->sim))
 			return (0);
-		ms_to_timespac(now_ms() + 1, &ts);
+		ms_to_timespec(now_ms() + 1, &ts);
 		pthread_cond_timedwait(&dongle->cond, &dongle->lock, &ts);
 	}
 	return (1);
@@ -57,7 +57,7 @@ int	take_dongle(t_coder *coder, t_dongle *dongle)
 {
 	int	granted;
 
-	pthread_mutex_lockI(&dongle->lock);
+	pthread_mutex_lock(&dongle->lock);
 	if (!heap_push(&dongle->queue, build_request(coder)))
 	{
 		pthread_mutex_unlock(&dongle->lock);
@@ -84,5 +84,5 @@ void	drop_dongle(t_sim *sim, t_dongle *dongle)
 	dongle->taken = 0;
 	dongle->free_at = now_ms() + sim->cooldown;
 	pthread_cond_broadcast(&dongle->cond);
-	pthread_mutex_lock(&dongle->lock)
+	pthread_mutex_lock(&dongle->lock);
 }
