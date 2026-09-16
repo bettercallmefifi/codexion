@@ -61,7 +61,7 @@ static int	parse_times(t_sim *sim, char **av)
 	sim->debug_ms = val[2];
 	sim->refactor_ms = val[3];
 	sim->nb_compiles = (int)val[4];
-	sim->sooldown = val[5];
+	sim->cooldown = val[5];
 	return (sim->burnout > 0);
 }
 

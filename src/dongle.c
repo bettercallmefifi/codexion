@@ -84,5 +84,5 @@ void	drop_dongle(t_sim *sim, t_dongle *dongle)
 	dongle->taken = 0;
 	dongle->free_at = now_ms() + sim->cooldown;
 	pthread_cond_broadcast(&dongle->cond);
-	pthread_mutex_lock(&dongle->lock);
+	pthread_mutex_unlock(&dongle->lock);
 }

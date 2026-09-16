@@ -43,7 +43,7 @@ static void	join_threads(t_sim *sim, int made, int monitor_up)
 	i = 0;
 	while (i < made)
 	{
-		pthread_join(s->coders[i].thread, NULL);
+		pthread_join(sim->coders[i].thread, NULL);
 		i++;
 	}
 }

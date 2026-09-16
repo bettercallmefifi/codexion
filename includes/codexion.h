@@ -42,7 +42,7 @@ typedef struct s_heap
 
 typedef struct s_dongle
 {
-	int				teken;
+	int				taken;
 	long long		free_at;
 	t_heap			queue;
 	pthread_mutex_t	lock;

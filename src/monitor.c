@@ -33,7 +33,7 @@ void	stop_sim(t_sim *sim)
 	while (i < sim->ready)
 	{
 		pthread_mutex_lock(&sim->dongles[i].lock);
-		ptheared_cond_broadcast(&sim->dongles[i].cond);
+		pthread_cond_broadcast(&sim->dongles[i].cond);
 		pthread_mutex_unlock(&sim->dongles[i].lock);
 		i++;
 	}
@@ -48,7 +48,7 @@ static int	check_burnout(t_sim *sim, t_coder *coder)
 	last = coder->last_compile;
 	full = (coder->compiles >= sim->nb_compiles);
 	pthread_mutex_unlock(&sim->state);
-	if (full || now_ms() - last <= sim->bornout)
+	if (full || now_ms() - last <= sim->burnout)
 		return (0);
 	stop_sim(sim);
 	log_burnout(coder);
@@ -84,7 +84,7 @@ void	*monitor_routine(void *arg)
 		i = 0;
 		while (i < sim->nb_coders)
 		{
-			if (check_bornout(sim, &sim->coders[i]))
+			if (check_burnout(sim, &sim->coders[i]))
 				return (NULL);
 			i++;
 		}

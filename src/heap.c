@@ -34,6 +34,16 @@ void	heap_free(t_heap *heap)
 
 int	heap_push(t_heap *heap, t_request req)
 {
+	if (heap->size >= heap->capacity)
+		return (0);
+	heap->data[heap->size] = req;
+	heap->size++;
+	sift_up(heap, heap->size - 1);
+	return (1);
+}
+
+int	heap_pop(t_heap *heap)
+{
 	if (heap->size == 0)
 		return (0);
 	heap->size--;

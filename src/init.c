@@ -12,15 +12,15 @@
 
 #include "codexion.h"
 
-static int	int_dongles(t_sim *sim)
+static int	init_dongles(t_sim *sim)
 {
-	sim->dongles = malloc(sizeof(t_dongles) * sim->nb_coders);
+	sim->dongles = malloc(sizeof(t_dongle) * sim->nb_coders);
 	if (!sim->dongles)
 		return (0);
-	memset(sim->dongles, 0, sizeof(t_dongles) * sim->nb_coders);
+	memset(sim->dongles, 0, sizeof(t_dongle) * sim->nb_coders);
 	while (sim->ready < sim->nb_coders)
 	{
-		if (!heap_init(&sim->dongles[sim->ready].queue, NULL))
+		if (!heap_init(&sim->dongles[sim->ready].queue, sim->mode))
 			return (0);
 		pthread_mutex_init(&sim->dongles[sim->ready].lock, NULL);
 		pthread_cond_init(&sim->dongles[sim->ready].cond, NULL);
@@ -36,7 +36,7 @@ static int	init_coders(t_sim *sim)
 	sim->coders = malloc(sizeof(t_coder) * sim->nb_coders);
 	if (!sim->coders)
 		return (0);
-	memset(sim->coders, 0, sizeof(t_coders) * sim->coders)
+	memset(sim->coders, 0, sizeof(t_coder) * sim->nb_coders);
 	i = 0;
 	while (i < sim->nb_coders)
 	{
@@ -51,7 +51,7 @@ static int	init_coders(t_sim *sim)
 
 int	init_sim(t_sim *sim)
 {
-	sim->running = 0;
+	sim->running = 1;
 	sim->seq = 0;
 	sim->ready = 0;
 	pthread_mutex_init(&sim->state, NULL);

@@ -64,7 +64,7 @@ void	sift_down(t_heap *heap, int i)
 	}
 }
 
-int	heap_remove(t_heap	*heap, int i)
+int	heap_remove(t_heap	*heap, int id)
 {
 	int	i;
 
@@ -74,7 +74,7 @@ int	heap_remove(t_heap	*heap, int i)
 		if (heap->data[i].id == id)
 		{
 			heap->size--;
-			heap->data[i] == heap->data[heap->size];
+			heap->data[i] = heap->data[heap->size];
 			sift_down(heap, i);
 			sift_up(heap, i);
 			return (1);

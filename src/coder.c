@@ -18,7 +18,7 @@ static void	do_compile(t_coder *coder)
 	coder->last_compile = now_ms();
 	coder->compiles++;
 	pthread_mutex_unlock(&coder->sim->state);
-	log_state(coder, "is_compiling");
+	log_state(coder, "is compiling");
 	precise_sleep(coder->sim, coder->sim->compile_ms);
 }
 
@@ -28,7 +28,7 @@ static int	coder_done(t_coder *coder)
 
 	pthread_mutex_lock((&coder->sim->state));
 	done = (coder->compiles >= coder->sim->nb_compiles);
-	pthread_mutex_unlock(&coder->sim->satate);
+	pthread_mutex_unlock(&coder->sim->state);
 	return (done);
 }
 
