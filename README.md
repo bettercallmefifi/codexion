@@ -33,9 +33,8 @@ make
 | `make fclean` | also removes the binary |
 | `make re` | full rebuild |
 
-All eight arguments are mandatory. Values must be integers with no sign, no
-decimal point and no leading `+`; `time_to_burnout` must be greater than 0;
-`number_of_coders` must be between 1 and 200; the scheduler must be exactly
+All eight arguments are mandatory. Values must be integers; `time_to_burnout` must be greater than 0;
+`number_of_coders` must be more than 1; the scheduler must be exactly
 `fifo` or `edf`. Anything else prints usage on `stderr` and exits with status 1.
 
 ### Usage examples
