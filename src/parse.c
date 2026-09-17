@@ -18,7 +18,7 @@ static int	usage_error(void)
 		"time_to_compile time_to_debug time_to_refactor "
 		"number_of_compiles_required dongle_cooldown <fifo|edf>\n"
 		"Values must be integers >= 0, time_to_burnout > 0, "
-		"numver_of_coders between 1 and %d.\n", MAX_CODERS);
+		"numver_of_coders more than 1.\n");
 	return (0);
 }
 
@@ -31,6 +31,8 @@ static int	parse_number(const char *str, long long *out)
 	i = 0;
 	if (!str[0])
 		return (0);
+	if (str[i] == '+')
+		i++;
 	while (str[i])
 	{
 		if (str[i] < '0' || str[i] > '9')
@@ -82,7 +84,7 @@ int	parse_args(t_sim *sim, int ac, char **av)
 
 	if (ac != 9)
 		return (usage_error());
-	if (!parse_number(av[1], &nb) || nb < 1 || nb > MAX_CODERS)
+	if (!parse_number(av[1], &nb) || nb < 1)
 		return (usage_error());
 	sim->nb_coders = (int)nb;
 	if (!parse_times(sim, av))

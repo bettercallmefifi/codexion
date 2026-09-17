@@ -20,7 +20,6 @@
 # include <sys/time.h>
 # include <unistd.h>
 
-# define MAX_CODERS 200
 # define HEAP_CAPACITY 2
 # define MODE_FIFO 0
 # define MODE_EDF 1
