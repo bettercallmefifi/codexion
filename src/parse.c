@@ -42,6 +42,8 @@ static int	parse_number(const char *str, long long *out)
 			return (0);
 		i++;
 	}
+	if (i == 0 && str[0] == '+')
+		return (0);
 	*out = value;
 	return (1);
 }
